@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Desktop</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<style>
+
+    /* Sound unlock prompt */
+#sound-prompt {
+  position: fixed;
+  bottom: 36px; /* sits just above the taskbar */
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--win);
+  border-top:   2px solid var(--light);
+  border-left:  2px solid var(--light);
+  border-right: 2px solid var(--darker);
+  border-bottom:2px solid var(--darker);
+  padding: 4px 12px;
+  font-family: 'MS Sans Serif', Arial, sans-serif;
+  font-size: 11px;
+  z-index: 99998;
+  cursor: pointer;
+  white-space: nowrap;
+}
+/* ===== WIN95 PALETTE ===== */
+:root {
+  --desk:    #008080;
+  --win:     #c0c0c0;
+  --light:   #ffffff;
+  --mid:     #dfdfdf;
+  --dark:    #808080;
+  --darker:  #404040;
+  --title-a1:#000080;
+  --title-a2:#0040c0;
+  --title-i1:#808080;
+  --title-i2:#a0a0a0;
+  --text:    #000000;
+  --white:   #ffffff;
+  --sunken:  #ffffff;
+  --taskbar: #c0c0c0;
+}
+
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  font-family: 'MS Sans Serif','Microsoft Sans Serif',Arial,sans-serif;
+  font-size: 11px;
+  background: var(--desk);
+  height: 100vh;
+  overflow: hidden;
+  cursor: default;
+  color: var(--text);
+}
+
+/* ===== DESKTOP ===== */
+#desktop {
+  position: fixed;
+  inset: 0 0 28px 0;
+  background: var(--desk);
+}
+
+/* ===== WINDOW BASE ===== */
+.window {
+  position: absolute;
+  background: var(--win);
+  border-top:   2px solid var(--light);
+  border-left:  2px solid var(--light);
+  border-right: 2px solid var(--darker);
+  border-bottom:2px solid var(--darker);
+  box-shadow: 1px 1px 0 var(--dark);
+  display: none;
+  min-width: 160px;
+  min-height: 100px;
+  overflow: hidden;
+}
+.window.visible { display: flex; flex-direction: column; }
+.window.active  { z-index: 200; }
+.window.inactive .win-titlebar {
+  background: linear-gradient(90deg, var(--title-i1), var(--title-i2));
+}
+
+/* ===== TITLE BAR ===== */
+.win-titlebar {
+  background: linear-gradient(90deg, var(--title-a1), var(--title-a2));
+  color: var(--white);
+  height: 18px;
+  min-height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 2px;
+  cursor: move;
+  user-select: none;
+  flex-shrink: 0;
+}
+.win-title {
+  font-size: 11px;
+  font-weight: bold;
+  padding-left: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.win-controls { display:flex; gap:2px; }
+.win-btn {
+  width: 16px; height: 14px;
+  background: var(--win);
+  border-top:   1px solid var(--light);
+  border-left:  1px solid var(--light);
+  border-right: 1px solid var(--darker);
+  border-bottom:1px solid var(--darker);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 9px; font-weight: bold; line-height: 1;
+  color: var(--text); cursor: pointer;
+  font-family: inherit; text-decoration: none;
+}
+.win-btn:active {
+  border-top:   1px solid var(--darker);
+  border-left:  1px solid var(--darker);
+  border-right: 1px solid var(--light);
+  border-bottom:1px solid var(--light);
+}
+
+/* ===== MENU BAR ===== */
+.win-menubar {
+  background: var(--win);
+  border-bottom: 1px solid var(--dark);
+  display: flex;
+  padding: 1px 2px;
+  flex-shrink: 0;
+}
+.win-menubar span {
+  padding: 2px 6px; cursor: pointer; font-size:11px;
+}
+.win-menubar span:hover { background:var(--title-a1); color:var(--white); }
+
+/* ===== WINDOW BODY ===== */
+.win-body {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding: 4px;
+}
+
+/* ===== SUNKEN PANEL ===== */
+.sunken {
+  background: var(--sunken);
+  border-top:   2px solid var(--darker);
+  border-left:  2px solid var(--darker);
+  border-right: 2px solid var(--light);
+  border-bottom:2px solid var(--light);
+  flex: 1;
+  overflow: hidden;
+}
+
+/* ===== STATUS BAR ===== */
+.win-statusbar {
+  display: flex; gap: 2px; padding: 2px 0 0;
+  flex-shrink: 0;
+}
+.status-pane {
+  flex:1;
+  border-top:   1px solid var(--darker);
+  border-left:  1px solid var(--darker);
+  border-right: 1px solid var(--light);
+  border-bottom:1px solid var(--light);
+  padding: 1px 4px; font-size:11px;
+}
+
+/* Screensaver */
+#screensaver {
+  display: none;
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 99999;
+  cursor: none;
+}
+
+
+
+/* ===== RAISED BUTTON ===== */
+.raised-btn {
+  background: var(--win);
+  border-top:   2px solid var(--light);
+  border-left:  2px solid var(--light);
+  border-right: 2px solid var(--darker);
+  border-bottom:2px solid var(--darker);
+  padding: 3px 10px; cursor:pointer;
+  font-family:inherit; font-size:11px; color:var(--text);
+}
+.raised-btn:active {
+  border-top:   2px solid var(--darker);
+  border-left:  2px solid var(--darker);
+  border-right: 2px solid var(--light);
+  border-bottom:2px solid var(--light);
+}
+.raised-btn:hover { background: var(--mid); }
+
+/* ====================================================
+   NOTEPAD WINDOW
+   ==================================================== */
+#notepad-window { width: 420px; height: 340px; top:80px; left:220px; z-index:100; }
+
+#notepad-text {
+  width: 100%; height: 100%;
+  background: var(--white);
+  border: none; outline: none; resize: none;
+  font-family: 'Courier New', monospace;
+  font-size: 12px; color: var(--text);
+  padding: 4px;
+  line-height: 1.5;
+}
+
+/* ====================================================
+   CALCULATOR WINDOW
+   ==================================================== */
+#calc-window { width: 192px; height: 240px; bottom:36px; right:16px; z-index:100; }
+
+.calc-display-wrap {
+  background: var(--white);
+  border-top:   2px solid var(--darker);
+  border-left:  2px solid var(--darker);
+  border-right: 2px solid var(--light);
+  border-bottom:2px solid var(--light);
+  margin-bottom: 4px;
+  padding: 2px 4px;
+  flex-shrink: 0;
+}
+#calc-display {
+  width:100%; background:transparent; border:none; outline:none;
+  font-family:'Courier New',monospace; font-size:18px; font-weight:bold;
+  text-align:right; color:var(--text);
+}
+.calc-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 3px;
+  flex: 1;
+}
+.calc-btn {
+  background: var(--win);
+  border-top:   2px solid var(--light);
+  border-left:  2px solid var(--light);
+  border-right: 2px solid var(--darker);
+  border-bottom:2px solid var(--darker);
+  font-family:inherit; font-size:11px; font-weight:bold;
+  color:var(--text); cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  min-height: 22px;
+}
+.calc-btn:active {
+  border-top:   2px solid var(--darker);
+  border-left:  2px solid var(--darker);
+  border-right: 2px solid var(--light);
+  border-bottom:2px solid var(--light);
+}
+.calc-btn:hover { background:var(--mid); }
+.calc-btn.op   { color: #000080; }
+.calc-btn.eq   { background:#000080; color:var(--white); }
+.calc-btn.eq:hover { background:#0040c0; }
+.calc-btn.wide { grid-column: span 2; }
+
+/* ====================================================
+   TIMER WINDOW
+   ==================================================== */
+#timer-window { width: 195px; height: 230px; top:16px; left:16px; z-index:100; }
+
+.timer-inner {
+  display:flex; flex-direction:column; align-items:center;
+  padding:6px 8px 4px; gap:4px; height:100%;
+}
+.timer-emoji { font-size:22px; line-height:1; }
+.timer-display {
+  font-family:'Courier New',monospace;
+  font-size:28px; font-weight:bold; color:var(--text);
+  letter-spacing:2px; padding:2px 6px;
+  background:var(--white);
+  border-top:   2px solid var(--darker);
+  border-left:  2px solid var(--darker);
+  border-right: 2px solid var(--light);
+  border-bottom:2px solid var(--light);
+  width:100%; text-align:center;
+}
+.timer-display.running { color:#000080; }
+.timer-display.done    { color:#800000; animation:tblink 0.6s ease-in-out infinite alternate; }
+@keyframes tblink { from{opacity:1} to{opacity:0.3} }
+
+.timer-inputs {
+  display:flex; align-items:center; gap:2px;
+  width:100%;
+}
+.timer-inputs input {
+  width:36px; background:var(--white);
+  border-top:   2px solid var(--darker);
+  border-left:  2px solid var(--darker);
+  border-right: 2px solid var(--light);
+  border-bottom:2px solid var(--light);
+  font-family:'Courier New',monospace; font-size:12px;
+  text-align:center; padding:2px; color:var(--text);
+  outline:none;
+}
+.timer-inputs input::-webkit-inner-spin-button,
+.timer-inputs input::-webkit-outer-spin-button { -webkit-appearance:none; }
+.timer-sep { font-weight:bold; font-size:14px; color:var(--darker); }
+.timer-lbls {
+  display:flex; gap:2px; width:100%; justify-content:space-around;
+  font-size:9px; color:var(--dark);
+}
+.timer-btns { display:flex; gap:4px; width:100%; margin-top:2px; }
+.timer-btns .raised-btn { flex:1; text-align:center; padding:3px 0; }
+.timer-status { font-size:10px; color:var(--dark); }
+
+/* ====================================================
+   LINKS WINDOW
+   ==================================================== */
+#links-window { width: 195px; height: 160px; bottom:36px; left:16px; z-index:100; }
+
+.links-list {
+  background: var(--win);
+  height:100%; padding:6px 8px;
+  overflow-y:auto;
+  display:flex; flex-direction:column; gap:4px;
+}
+.link-item {
+  display:flex; align-items:center; gap:6px;
+  padding:3px 4px; cursor:pointer;
+  border:1px solid transparent;
+}
+.link-item:hover {
+  background:var(--title-a1); color:var(--white);
+  border:1px dotted var(--white);
+}
+.link-item:hover a { color:var(--white); }
+.link-item .link-icon { font-size:14px; flex-shrink:0; }
+.link-item a {
+  color:var(--title-a1); text-decoration:none;
+  font-size:11px; word-break:break-all;
+}
+.link-item a:hover { text-decoration:underline; }
+
+/* ===== SCROLLBARS ===== */
+::-webkit-scrollbar { width:16px; }
+::-webkit-scrollbar-track {
+  background:var(--win);
+  border-left:1px solid var(--dark);
+}
+::-webkit-scrollbar-thumb {
+  background:var(--win);
+  border-top:  1px solid var(--light);
+  border-left: 1px solid var(--light);
+  border-right:1px solid var(--darker);
+  border-bottom:1px solid var(--darker);
+}
+::-webkit-scrollbar-button {
+  background:var(--win);
+  border-top:  1px solid var(--light);
+  border-left: 1px solid var(--light);
+  border-right:1px solid var(--darker);
+  border-bottom:1px solid var(--darker);
+  height:16px; display:block;
+}
+
+/* ===== TASKBAR ===== */
+#taskbar {
+  position:fixed; bottom:0; left:0; right:0;
+  height:28px; background:var(--taskbar);
+  border-top:2px solid var(--light);
+  display:flex; align-items:center;
+  z-index:9999; padding:0 2px; gap:2px;
+}
+.start-btn {
+  height:22px; padding:0 8px;
+  background:var(--win);
+  border-top:   2px solid var(--light);
+  border-left:  2px solid var(--light);
+  border-right: 2px solid var(--darker);
+  border-bottom:2px solid var(--darker);
+  font-size:11px; font-weight:bold; cursor:pointer;
+  display:flex; align-items:center; gap:4px;
+  font-family:inherit;
+}
+.start-btn:active {
+  border-top:   2px solid var(--darker);
+  border-left:  2px solid var(--darker);
+  border-right: 2px solid var(--light);
+  border-bottom:2px solid var(--light);
+}
+.tb-sep {
+  width:2px; height:22px;
+  border-left:1px solid var(--darker);
+  border-right:1px solid var(--light);
+  margin:0 2px;
+}
+.tb-item {
+  height:22px; padding:0 8px;
+  background:var(--win);
+  border-top:   1px solid var(--light);
+  border-left:  1px solid var(--light);
+  border-right: 1px solid var(--darker);
+  border-bottom:1px solid var(--darker);
+  font-size:11px; cursor:pointer;
+  display:flex; align-items:center; gap:4px;
+  font-family:inherit; color:var(--text);
+  max-width:140px; overflow:hidden;
+  text-overflow:ellipsis; white-space:nowrap;
+}
+.tb-item.active {
+  border-top:   1px solid var(--darker);
+  border-left:  1px solid var(--darker);
+  border-right: 1px solid var(--light);
+  border-bottom:1px solid var(--light);
+  background: var(--mid);
+}
+.tb-item:hover { background:var(--mid); }
+#clock {
+  margin-left:auto;
+  height:22px; padding:0 8px;
+  border-top:   1px solid var(--darker);
+  border-left:  1px solid var(--darker);
+  border-right: 1px solid var(--light);
+  border-bottom:1px solid var(--light);
+  font-size:11px; display:flex; align-items:center;
+  font-family:inherit;
+}
+</style>
+</head>
+<body>
+
+<div id="desktop">
+
+  <!-- ======================================================= NOTEPAD -->
+  <div class="window visible" id="notepad-window">
+    <div class="win-titlebar" data-win="notepad">
+      <span class="win-title"><i class="fas fa-file-alt"></i> Notepad</span>
+      <div class="win-controls">
+        <span class="win-btn" onclick="minimizeWin('notepad')">_</span>
+        <span class="win-btn" onclick="maximizeWin('notepad')">□</span>
+        <span class="win-btn close-x" onclick="minimizeWin('notepad')">×</span>
+      </div>
+    </div>
+    <div class="win-menubar">
+      <span><u>F</u>ile</span>
+      <span><u>E</u>dit</span>
+      <span><u>F</u>ormat</span>
+      <span><u>H</u>elp</span>
+    </div>
+    <div class="win-body" style="padding:0;">
+      <textarea id="notepad-text" spellcheck="false" placeholder="Type your notes here..."></textarea>
+    </div>
+    <div class="win-statusbar" style="padding:2px 4px;">
+      <div class="status-pane" id="notepad-status">Ln 1, Col 1</div>
+    </div>
+  </div>
+
+  <!-- ======================================================= CALCULATOR -->
+  <div class="window visible" id="calc-window">
+    <div class="win-titlebar" data-win="calc">
+      <span class="win-title"><i class="fas fa-calculator"></i> Calculator</span>
+      <div class="win-controls">
+        <span class="win-btn" onclick="minimizeWin('calc')">_</span>
+        <span class="win-btn close-x" onclick="minimizeWin('calc')">×</span>
+      </div>
+    </div>
+    <div class="win-body" style="padding:4px;">
+      <div class="calc-display-wrap">
+        <input type="text" id="calc-display" value="0" readonly>
+      </div>
+      <div class="calc-grid">
+        <button class="calc-btn op" onclick="calcOp('MC')">MC</button>
+        <button class="calc-btn op" onclick="calcOp('MR')">MR</button>
+        <button class="calc-btn op" onclick="calcOp('MS')">MS</button>
+        <button class="calc-btn op" onclick="calcOp('M+')">M+</button>
+
+        <button class="calc-btn" onclick="calcBack()">←</button>
+        <button class="calc-btn op" onclick="calcCE()">CE</button>
+        <button class="calc-btn op" onclick="calcC()">C</button>
+        <button class="calc-btn op" onclick="calcInput('/')">÷</button>
+
+        <button class="calc-btn" onclick="calcInput('7')">7</button>
+        <button class="calc-btn" onclick="calcInput('8')">8</button>
+        <button class="calc-btn" onclick="calcInput('9')">9</button>
+        <button class="calc-btn op" onclick="calcInput('*')">×</button>
+
+        <button class="calc-btn" onclick="calcInput('4')">4</button>
+        <button class="calc-btn" onclick="calcInput('5')">5</button>
+        <button class="calc-btn" onclick="calcInput('6')">6</button>
+        <button class="calc-btn op" onclick="calcInput('-')">−</button>
+
+        <button class="calc-btn" onclick="calcInput('1')">1</button>
+        <button class="calc-btn" onclick="calcInput('2')">2</button>
+        <button class="calc-btn" onclick="calcInput('3')">3</button>
+        <button class="calc-btn op" style="grid-row:span 2;" onclick="calcInput('+')">+</button>
+
+        <button class="calc-btn wide" onclick="calcInput('0')">0</button>
+        <button class="calc-btn" onclick="calcInput('.')">.</button>
+
+        <button class="calc-btn eq wide" onclick="calcEqual()">=</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================= TIMER -->
+  <div class="window visible" id="timer-window">
+    <div class="win-titlebar" data-win="timer">
+      <span class="win-title">🕐 Timer</span>
+      <div class="win-controls">
+        <span class="win-btn" onclick="minimizeWin('timer')">_</span>
+        <span class="win-btn close-x" onclick="minimizeWin('timer')">×</span>
+      </div>
+    </div>
+    <div class="win-body" style="padding:0;">
+      <div class="timer-inner">
+        <div class="timer-emoji" id="t-emoji">🕐</div>
+        <div class="timer-display" id="t-display">00:00</div>
+        <div class="timer-inputs">
+          <input type="number" id="t-h" min="0" max="23" value="0">
+          <span class="timer-sep">:</span>
+          <input type="number" id="t-m" min="0" max="59" value="5">
+          <span class="timer-sep">:</span>
+          <input type="number" id="t-s" min="0" max="59" value="0">
+        </div>
+        <div class="timer-lbls">
+          <span>hr</span><span>min</span><span>sec</span>
+        </div>
+        <div class="timer-btns">
+          <button class="raised-btn" id="t-main-btn" onclick="timerStartPause()">Start</button>
+          <button class="raised-btn" onclick="timerReset()" style="flex:0 0 auto;padding:3px 8px;">↺</button>
+        </div>
+        <div class="timer-status" id="t-status">Set a time above</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================= LINKS -->
+  <div class="window visible" id="links-window">
+    <div class="win-titlebar" data-win="links">
+      <span class="win-title"><i class="fas fa-globe"></i> Favorites</span>
+      <div class="win-controls">
+        <span class="win-btn" onclick="minimizeWin('links')">_</span>
+        <span class="win-btn close-x" onclick="minimizeWin('links')">×</span>
+      </div>
+    </div>
+    <div class="win-menubar">
+      <span><u>F</u>avorites</span>
+      <span><u>H</u>elp</span>
+    </div>
+    <div class="win-body" style="padding:0;">
+      <div class="links-list">
+        <!--
+          To add more links, copy a .link-item div and update the
+          href and label text. All changes are made right here in the HTML.
+        -->
+        <div class="link-item">
+          <span class="link-icon">🌦️</span>
+          <a href="https://weatherstar.netbymatt.com/" target="_blank">WeatherStar</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /desktop -->
+
+<!-- ======================================================= TASKBAR -->
+<div id="taskbar">
+  <button class="start-btn">
+    <i class="fas fa-windows"></i> <strong>Start</strong>
+  </button>
+  <div class="tb-sep"></div>
+  <div id="tb-items" style="display:flex;gap:2px;align-items:center;"></div>
+  <div id="clock">12:00 PM</div>
+</div>
+<!-- SCREENSAVER -->
+<video id="screensaver" loop playsinline>
+  <source src="./mysteryshortmp4.mp4" type="video/mp4">
+</video>
+
+<script>
+  const video = document.getElementById("screensaver");
+
+  setTimeout(() => {
+    video.style.display = "block";
+    video.play().catch(error => {
+      console.log("Autoplay was blocked:", error);
+    });
+  }, 10 * 60 * 1000);
+
+  video.addEventListener("click", () => {
+    video.pause();
+    video.style.display = "none";
+  });
+</script>
+
+<div id="sound-prompt">🔊 Click anywhere to enable sound</div>
+
+<script>
+  const soundPrompt = document.getElementById("sound-prompt");
+
+  function unlockSound() {
+    // Create and immediately discard a silent audio context
+    // — this satisfies the browser's "user gesture required" rule
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    ctx.resume().then(() => ctx.close());
+
+    soundPrompt.style.display = "none";
+    document.removeEventListener("click", unlockSound);
+  }
+
+  document.addEventListener("click", unlockSound);
+</script>
+<script>
+// ── Window management ─────────────────────────────────────────────────────────
+let zTop = 200;
+let activeWin = null;
+
+const winMeta = {
+  notepad: { title: '📝 Notepad',     icon: 'fas fa-file-alt' },
+  calc:    { title: '🔢 Calculator',  icon: 'fas fa-calculator' },
+  timer:   { title: '⏱ Timer',        icon: '' },
+  links:   { title: '🌐 Favorites',   icon: 'fas fa-globe' }
+};
+
+function focusWin(id) {
+  document.querySelectorAll('.window').forEach(w => {
+    w.classList.remove('active');
+    w.classList.add('inactive');
+  });
+  document.querySelectorAll('.tb-item').forEach(t => t.classList.remove('active'));
+  const el = document.getElementById(id + '-window');
+  if (el && el.classList.contains('visible')) {
+    el.classList.add('active');
+    el.classList.remove('inactive');
+    el.style.zIndex = ++zTop;
+    activeWin = id;
+    const tb = document.querySelector(`.tb-item[data-win="${id}"]`);
+    if (tb) tb.classList.add('active');
+  }
+}
+
+function minimizeWin(id) {
+  const el = document.getElementById(id + '-window');
+  if (!el) return;
+  el.classList.remove('visible','active');
+  el.classList.add('inactive');
+  const tb = document.querySelector(`.tb-item[data-win="${id}"]`);
+  if (tb) tb.classList.remove('active');
+  if (activeWin === id) activeWin = null;
+}
+
+function restoreWin(id) {
+  const el = document.getElementById(id + '-window');
+  if (!el) return;
+  if (el.classList.contains('visible') && activeWin === id) {
+    minimizeWin(id);
+  } else {
+    el.classList.add('visible');
+    el.classList.remove('inactive');
+    focusWin(id);
+  }
+}
+
+function maximizeWin(id) {
+  const el = document.getElementById(id + '-window');
+  if (!el) return;
+  if (el.classList.contains('maximized')) {
+    el.classList.remove('maximized');
+    el.style.width  = el.dataset.ow || '';
+    el.style.height = el.dataset.oh || '';
+    el.style.top    = el.dataset.ot || '';
+    el.style.left   = el.dataset.ol || '';
+    el.style.right  = el.dataset.or || '';
+    el.style.bottom = el.dataset.ob || '';
+  } else {
+    el.dataset.ow = el.style.width;
+    el.dataset.oh = el.style.height;
+    el.dataset.ot = el.style.top;
+    el.dataset.ol = el.style.left;
+    el.dataset.or = el.style.right;
+    el.dataset.ob = el.style.bottom;
+    el.classList.add('maximized');
+    el.style.cssText += ';width:100vw!important;height:calc(100vh - 28px)!important;top:0!important;left:0!important;right:auto!important;bottom:auto!important;';
+  }
+}
+
+// Build taskbar items
+function buildTaskbar() {
+  const container = document.getElementById('tb-items');
+  container.innerHTML = '';
+  Object.keys(winMeta).forEach(id => {
+    const btn = document.createElement('div');
+    btn.className = 'tb-item';
+    btn.setAttribute('data-win', id);
+    btn.innerHTML = winMeta[id].title;
+    btn.onclick = () => restoreWin(id);
+    container.appendChild(btn);
+  });
+}
+buildTaskbar();
+
+// Click to focus
+document.addEventListener('mousedown', e => {
+  const win = e.target.closest('.window');
+  if (win) {
+    const id = win.id.replace('-window','');
+    focusWin(id);
+  }
+});
+
+// Initial focus
+setTimeout(() => focusWin('notepad'), 100);
+
+// ── Drag ──────────────────────────────────────────────────────────────────────
+let dragging = null, dragOX = 0, dragOY = 0;
+
+document.addEventListener('mousedown', e => {
+  const hdr = e.target.closest('.win-titlebar');
+  if (!hdr || e.target.closest('.win-controls')) return;
+  dragging = hdr.closest('.window');
+  const r = dragging.getBoundingClientRect();
+  dragOX = e.clientX - r.left;
+  dragOY = e.clientY - r.top;
+  e.preventDefault();
+});
+document.addEventListener('mousemove', e => {
+  if (!dragging) return;
+  const maxX = window.innerWidth  - dragging.offsetWidth;
+  const maxY = window.innerHeight - dragging.offsetHeight - 28;
+  dragging.style.left   = Math.max(0, Math.min(e.clientX - dragOX, maxX)) + 'px';
+  dragging.style.top    = Math.max(0, Math.min(e.clientY - dragOY, maxY)) + 'px';
+  dragging.style.right  = 'auto';
+  dragging.style.bottom = 'auto';
+});
+document.addEventListener('mouseup', () => { dragging = null; });
+document.addEventListener('dragstart', e => e.preventDefault());
+
+// ── Notepad status line ───────────────────────────────────────────────────────
+const notepadEl = document.getElementById('notepad-text');
+const notepadStatus = document.getElementById('notepad-status');
+
+notepadEl.addEventListener('keyup', updateNotepadStatus);
+notepadEl.addEventListener('click', updateNotepadStatus);
+
+function updateNotepadStatus() {
+  const text = notepadEl.value;
+  const pos  = notepadEl.selectionStart;
+  const lines = text.substring(0, pos).split('\n');
+  const ln = lines.length;
+  const col = lines[lines.length - 1].length + 1;
+  notepadStatus.textContent = `Ln ${ln}, Col ${col}`;
+}
+
+// Save notepad to sessionStorage
+notepadEl.addEventListener('input', () => {
+  sessionStorage.setItem('notepad', notepadEl.value);
+});
+const saved = sessionStorage.getItem('notepad');
+if (saved) notepadEl.value = saved;
+
+// ── Calculator ────────────────────────────────────────────────────────────────
+let calcExpr = '';
+let calcVal  = '0';
+let calcMem  = 0;
+let calcNew  = true;
+
+const calcDisp = document.getElementById('calc-display');
+
+function calcInput(v) {
+  const ops = ['+','-','*','/'];
+  if (ops.includes(v)) {
+    calcExpr = calcVal;
+    calcNew  = true;
+    calcVal  = calcVal + ' ' + v + ' ';
+    calcDisp.value = calcVal;
+  } else {
+    if (calcNew) { calcVal = ''; calcNew = false; }
+    if (v === '.' && calcVal.includes('.')) return;
+    calcVal += v;
+    calcDisp.value = calcVal.split(' ').pop();
+  }
+}
+
+function calcEqual() {
+  try {
+    const expr = calcDisp.value.includes(' ') ? calcDisp.value : calcVal;
+    const result = Function('"use strict"; return (' + calcVal + ')')();
+    calcVal  = String(parseFloat(result.toFixed(10)));
+    calcExpr = '';
+    calcNew  = true;
+    calcDisp.value = calcVal;
+  } catch(e) {
+    calcDisp.value = 'Error';
+    calcVal = '0'; calcNew = true;
+  }
+}
+
+function calcC()  { calcVal='0'; calcExpr=''; calcNew=true; calcDisp.value='0'; }
+function calcCE() { calcVal='0'; calcNew=true; calcDisp.value='0'; }
+function calcBack() {
+  if (calcNew) return;
+  calcVal = calcVal.slice(0,-1) || '0';
+  calcDisp.value = calcVal.split(' ').pop() || '0';
+}
+function calcOp(op) {
+  if (op==='MS') { calcMem=parseFloat(calcVal)||0; }
+  if (op==='MR') { calcVal=String(calcMem); calcDisp.value=calcVal; calcNew=true; }
+  if (op==='MC') { calcMem=0; }
+  if (op==='M+') { calcMem+=parseFloat(calcVal)||0; }
+}
+
+// Keyboard support for calculator
+document.addEventListener('keydown', e => {
+  if (activeWin !== 'calc') return;
+  const k = e.key;
+  if ('0123456789.'.includes(k)) calcInput(k);
+  else if (['+','-','*','/'].includes(k)) calcInput(k);
+  else if (k === 'Enter' || k === '=') calcEqual();
+  else if (k === 'Backspace') calcBack();
+  else if (k === 'Escape') calcC();
+});
+
+// ── Timer ─────────────────────────────────────────────────────────────────────
+const CLOCKS = ['🕐','🕑','🕒','🕓','🕔','🕕','🕖','🕗','🕘','🕙','🕚','🕛'];
+let tRemain=0, tRunning=false, tPaused=false, tInterval=null, tEmojiIdx=0;
+
+const tDisplay  = document.getElementById('t-display');
+const tEmoji    = document.getElementById('t-emoji');
+const tMainBtn  = document.getElementById('t-main-btn');
+const tStatus   = document.getElementById('t-status');
+const tH = document.getElementById('t-h');
+const tM = document.getElementById('t-m');
+const tS = document.getElementById('t-s');
+
+function tFmt(s) {
+  const h=Math.floor(s/3600), m=Math.floor((s%3600)/60), sec=s%60;
+  const p=n=>String(n).padStart(2,'0');
+  return h>0 ? `${p(h)}:${p(m)}:${p(sec)}` : `${p(m)}:${p(sec)}`;
+}
+function tGetSecs() {
+  return (parseInt(tH.value)||0)*3600 + (parseInt(tM.value)||0)*60 + (parseInt(tS.value)||0);
+}
+function tPreview() {
+  if (!tRunning && !tPaused) tDisplay.textContent = tFmt(tGetSecs());
+}
+[tH,tM,tS].forEach(el => {
+  el.addEventListener('input', tPreview);
+  el.addEventListener('focus', function(){ this.select(); });
+  el.addEventListener('keydown', e => { if(e.key==='Enter') timerStartPause(); });
+});
+tPreview();
+
+function timerStartPause() {
+  if (tPaused) {
+    tPaused=false; tRunning=true;
+    tMainBtn.textContent='Pause';
+    tStatus.textContent='Running…';
+    tDisplay.className='timer-display running';
+    tTick(); return;
+  }
+  if (tRunning) {
+    clearInterval(tInterval); tInterval=null;
+    tRunning=false; tPaused=true;
+    tMainBtn.textContent='Resume';
+    tStatus.textContent='Paused';
+    tDisplay.className='timer-display'; return;
+  }
+  const secs=tGetSecs();
+  if (secs<=0){ tStatus.textContent='Enter a time first!'; return; }
+  tRemain=secs; tRunning=true; tPaused=false; tEmojiIdx=0;
+  tMainBtn.textContent='Pause';
+  tStatus.textContent='Running…';
+  tDisplay.className='timer-display running';
+  tDisplay.textContent=tFmt(tRemain);
+  tTick();
+}
+
+function tTick() {
+  clearInterval(tInterval);
+  tInterval=setInterval(()=>{
+    if (tRemain<=0){ tFinish(); return; }
+    tRemain--;
+    tDisplay.textContent=tFmt(tRemain);
+    tEmojiIdx=(tEmojiIdx+1)%CLOCKS.length;
+    tEmoji.textContent=CLOCKS[tEmojiIdx];
+  },1000);
+}
+
+function tFinish() {
+  clearInterval(tInterval); tRunning=false; tPaused=false;
+  tDisplay.textContent='00:00';
+  tDisplay.className='timer-display done';
+  tEmoji.textContent='⏰';
+  tMainBtn.textContent='Start';
+  tStatus.textContent="Time's up!";
+  tBeep();
+}
+
+function timerReset() {
+  clearInterval(tInterval); tRunning=false; tPaused=false; tRemain=0;
+  tEmoji.textContent='🕐';
+  tDisplay.className='timer-display';
+  tMainBtn.textContent='Start';
+  tStatus.textContent='Set a time above';
+  tPreview();
+}
+
+function tBeep() {
+  try {
+    const ctx=new(window.AudioContext||window.webkitAudioContext)();
+    [0,0.35,0.7].forEach(off=>{
+      const o=ctx.createOscillator(), g=ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      o.frequency.value=880; o.type='sine';
+      g.gain.setValueAtTime(0,ctx.currentTime+off);
+      g.gain.linearRampToValueAtTime(0.4,ctx.currentTime+off+0.02);
+      g.gain.linearRampToValueAtTime(0,ctx.currentTime+off+0.25);
+      o.start(ctx.currentTime+off); o.stop(ctx.currentTime+off+0.3);
+    });
+  } catch(e){}
+}
+
+// ── Clock ─────────────────────────────────────────────────────────────────────
+function updateClock() {
+  document.getElementById('clock').textContent =
+    new Date().toLocaleTimeString([],{hour:'numeric',minute:'2-digit',hour12:true});
+}
+updateClock();
+setInterval(updateClock, 1000);
+</script>
+</body>
+</html>
