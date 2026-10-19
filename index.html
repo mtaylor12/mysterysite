@@ -766,54 +766,73 @@ const saved = sessionStorage.getItem('notepad');
 if (saved) notepadEl.value = saved;
 
 // ── Calculator ────────────────────────────────────────────────────────────────
-let calcExpr = '';
-let calcVal  = '0';
-let calcMem  = 0;
-let calcNew  = true;
+let calcFirstNum = null;   // left-hand operand
+let calcOper     = null;   // pending operator
+let calcCurrent  = '0';    // number currently being typed
+let calcMem      = 0;
+let calcJustEvaled = false; // did we just hit equals?
 
 const calcDisp = document.getElementById('calc-display');
 
 function calcInput(v) {
   const ops = ['+','-','*','/'];
   if (ops.includes(v)) {
-    calcExpr = calcVal;
-    calcNew  = true;
-    calcVal  = calcVal + ' ' + v + ' ';
-    calcDisp.value = calcVal;
+    // If there's already a pending operation, evaluate it first
+    if (calcOper !== null && !calcJustEvaled) {
+      const result = _calcEval(parseFloat(calcFirstNum), calcOper, parseFloat(calcCurrent));
+      calcFirstNum = String(result);
+      calcDisp.value = calcFirstNum;
+    } else {
+      calcFirstNum = calcCurrent;
+    }
+    calcOper    = v;
+    calcCurrent = '0';
+    calcJustEvaled = false;
   } else {
-    if (calcNew) { calcVal = ''; calcNew = false; }
-    if (v === '.' && calcVal.includes('.')) return;
-    calcVal += v;
-    calcDisp.value = calcVal.split(' ').pop();
+    if (calcJustEvaled) { calcCurrent = ''; calcJustEvaled = false; }
+    if (calcCurrent === '0' && v !== '.') calcCurrent = '';
+    if (v === '.' && calcCurrent.includes('.')) return;
+    calcCurrent += v;
+    calcDisp.value = calcCurrent;
   }
+}
+
+function _calcEval(a, op, b) {
+  if (op === '+') return a + b;
+  if (op === '-') return a - b;
+  if (op === '*') return a * b;
+  if (op === '/') return b === 0 ? 'Error' : a / b;
+  return b;
 }
 
 function calcEqual() {
-  try {
-    const expr = calcDisp.value.includes(' ') ? calcDisp.value : calcVal;
-    const result = Function('"use strict"; return (' + calcVal + ')')();
-    calcVal  = String(parseFloat(result.toFixed(10)));
-    calcExpr = '';
-    calcNew  = true;
-    calcDisp.value = calcVal;
-  } catch(e) {
+  if (calcOper === null) return;
+  const a = parseFloat(calcFirstNum);
+  const b = parseFloat(calcCurrent);
+  const result = _calcEval(a, calcOper, b);
+  if (result === 'Error') {
     calcDisp.value = 'Error';
-    calcVal = '0'; calcNew = true;
+    calcC(); return;
   }
+  calcCurrent    = String(parseFloat(result.toFixed(10)));
+  calcDisp.value = calcCurrent;
+  calcFirstNum   = null;
+  calcOper       = null;
+  calcJustEvaled = true;
 }
 
-function calcC()  { calcVal='0'; calcExpr=''; calcNew=true; calcDisp.value='0'; }
-function calcCE() { calcVal='0'; calcNew=true; calcDisp.value='0'; }
+function calcC()  { calcFirstNum=null; calcOper=null; calcCurrent='0'; calcJustEvaled=false; calcDisp.value='0'; }
+function calcCE() { calcCurrent='0'; calcDisp.value='0'; }
 function calcBack() {
-  if (calcNew) return;
-  calcVal = calcVal.slice(0,-1) || '0';
-  calcDisp.value = calcVal.split(' ').pop() || '0';
+  if (calcJustEvaled) return;
+  calcCurrent = calcCurrent.slice(0,-1) || '0';
+  calcDisp.value = calcCurrent;
 }
 function calcOp(op) {
-  if (op==='MS') { calcMem=parseFloat(calcVal)||0; }
-  if (op==='MR') { calcVal=String(calcMem); calcDisp.value=calcVal; calcNew=true; }
+  if (op==='MS') { calcMem=parseFloat(calcCurrent)||0; }
+  if (op==='MR') { calcCurrent=String(calcMem); calcDisp.value=calcCurrent; }
   if (op==='MC') { calcMem=0; }
-  if (op==='M+') { calcMem+=parseFloat(calcVal)||0; }
+  if (op==='M+') { calcMem+=parseFloat(calcCurrent)||0; }
 }
 
 // Keyboard support for calculator
@@ -824,7 +843,7 @@ document.addEventListener('keydown', e => {
   else if (['+','-','*','/'].includes(k)) calcInput(k);
   else if (k === 'Enter' || k === '=') calcEqual();
   else if (k === 'Backspace') calcBack();
-  else if (k === 'Escape') calcC();
+  else if (k === 'Escape' || k === 'c' || k === 'C') calcC();
 });
 
 // ── Timer ─────────────────────────────────────────────────────────────────────
