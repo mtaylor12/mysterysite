@@ -592,7 +592,7 @@ body {
     video.play().catch(error => {
       console.log("Autoplay was blocked:", error);
     });
-  }, 10 * 60 * 1000);
+  }, 10 * 60 * 1000); // 10 minutes
 
   video.addEventListener("click", () => {
     video.pause();
