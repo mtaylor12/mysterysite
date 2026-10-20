@@ -6,25 +6,6 @@
 <title>My Desktop</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 <style>
-
-    /* Sound unlock prompt */
-#sound-prompt {
-  position: fixed;
-  bottom: 36px; /* sits just above the taskbar */
-  left: 50%;
-  transform: translateX(-50%);
-  background: var(--win);
-  border-top:   2px solid var(--light);
-  border-left:  2px solid var(--light);
-  border-right: 2px solid var(--darker);
-  border-bottom:2px solid var(--darker);
-  padding: 4px 12px;
-  font-family: 'MS Sans Serif', Arial, sans-serif;
-  font-size: 11px;
-  z-index: 99998;
-  cursor: pointer;
-  white-space: nowrap;
-}
 /* ===== WIN95 PALETTE ===== */
 :root {
   --desk:    #008080;
@@ -173,20 +154,6 @@ body {
   border-bottom:1px solid var(--light);
   padding: 1px 4px; font-size:11px;
 }
-
-/* Screensaver */
-#screensaver {
-  display: none;
-  position: fixed;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  z-index: 99999;
-  cursor: none;
-}
-
-
 
 /* ===== RAISED BUTTON ===== */
 .raised-btn {
@@ -432,6 +399,56 @@ body {
   font-size:11px; display:flex; align-items:center;
   font-family:inherit;
 }
+
+/* ── Monitor / Screensaver window ─────────────────────────────────────────── */
+#monitor-window { width:340px; height:260px; top:16px; right:16px; left:auto; }
+
+.monitor-wrap {
+  position:relative; width:100%; height:100%; overflow:hidden;
+  background:#1a1a1a;
+}
+/* Menu shown when video isn't playing */
+.monitor-menu {
+  position:absolute; inset:0;
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:8px;
+}
+.monitor-menu-lbl {
+  color:#00ff41; font-family:'Courier New',monospace; font-size:10px;
+  letter-spacing:2px; text-transform:uppercase;
+  text-shadow:0 0 8px #00ff41; margin-bottom:4px;
+}
+.monitor-choice {
+  background:#111; color:#c0c0c0;
+  border-top:1px solid #444; border-left:1px solid #444;
+  border-right:1px solid #888; border-bottom:1px solid #888;
+  font-family:'MS Sans Serif',Arial,sans-serif; font-size:11px;
+  padding:5px 0; cursor:pointer; width:160px; text-align:left;
+  padding-left:12px;
+}
+.monitor-choice:hover { background:#000080; color:#fff; }
+.monitor-choice:active {
+  border-top:1px solid #888; border-left:1px solid #888;
+  border-right:1px solid #444; border-bottom:1px solid #444;
+}
+/* Video fills entire window body */
+.monitor-screen {
+  display:none; position:absolute; inset:0; background:#000;
+}
+.monitor-screen video {
+  width:100%; height:100%; object-fit:cover; display:block;
+}
+/* Stop button overlaid bottom-center on video */
+.monitor-stop {
+  position:absolute; bottom:10px; left:0; width:100%;
+  display:none; justify-content:center;
+}
+.monitor-stop button {
+  background:rgba(0,0,0,0.6); color:#fff;
+  border:1px solid #666;
+  font-family:inherit; font-size:10px; padding:3px 14px; cursor:pointer;
+}
+.monitor-stop button:hover { background:rgba(0,0,80,0.8); }
 </style>
 </head>
 <body>
@@ -568,6 +585,35 @@ body {
     </div>
   </div>
 
+
+  <!-- ======================================================= MONITOR -->
+  <div class="window visible" id="monitor-window">
+    <div class="win-titlebar" data-win="monitor">
+      <span class="win-title">🖥️ Screensaver</span>
+      <div class="win-controls">
+        <span class="win-btn" onclick="minimizeWin('monitor')">_</span>
+        <span class="win-btn close-x" onclick="minimizeWin('monitor')">×</span>
+      </div>
+    </div>
+    <div class="win-body" style="padding:0;">
+      <div class="monitor-wrap">
+        <!-- menu -->
+        <div class="monitor-menu" id="monitor-menu">
+          <div class="monitor-menu-lbl">SCREENSAVER</div>
+          <button class="monitor-choice" onclick="monitorPlay('mysterysmall.mp4')">&#9654; Mystery</button>
+          <button class="monitor-choice" onclick="monitorPlay('underwatersmall.mp4')">&#9654; Underwater</button>
+        </div>
+        <!-- video fills window -->
+        <div class="monitor-screen" id="monitor-screen-area">
+          <video id="monitor-video" loop playsinline></video>
+        </div>
+        <!-- stop overlay -->
+        <div class="monitor-stop" id="monitor-stop">
+          <button onclick="monitorStop()">&#9632; Stop</button>
+        </div>
+      </div>
+    </div>
+  </div>
 </div><!-- /desktop -->
 
 <!-- ======================================================= TASKBAR -->
@@ -579,44 +625,7 @@ body {
   <div id="tb-items" style="display:flex;gap:2px;align-items:center;"></div>
   <div id="clock">12:00 PM</div>
 </div>
-<!-- SCREENSAVER -->
-<video id="screensaver" loop playsinline>
-  <source src="./mysteryshorter.mp4" type="video/mp4">
-</video>
 
-<script>
-  const video = document.getElementById("screensaver");
-
-  setTimeout(() => {
-    video.style.display = "block";
-    video.play().catch(error => {
-      console.log("Autoplay was blocked:", error);
-    });
-  }, 10 * 60 * 1000); // 10 minutes
-
-  video.addEventListener("click", () => {
-    video.pause();
-    video.style.display = "none";
-  });
-</script>
-
-<div id="sound-prompt">🔊 Click anywhere to enable sound</div>
-
-<script>
-  const soundPrompt = document.getElementById("sound-prompt");
-
-  function unlockSound() {
-    // Create and immediately discard a silent audio context
-    // — this satisfies the browser's "user gesture required" rule
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    ctx.resume().then(() => ctx.close());
-
-    soundPrompt.style.display = "none";
-    document.removeEventListener("click", unlockSound);
-  }
-
-  document.addEventListener("click", unlockSound);
-</script>
 <script>
 // ── Window management ─────────────────────────────────────────────────────────
 let zTop = 200;
@@ -626,7 +635,8 @@ const winMeta = {
   notepad: { title: '📝 Notepad',     icon: 'fas fa-file-alt' },
   calc:    { title: '🔢 Calculator',  icon: 'fas fa-calculator' },
   timer:   { title: '⏱ Timer',        icon: '' },
-  links:   { title: '🌐 Favorites',   icon: 'fas fa-globe' }
+  links:   { title: '🌐 Favorites',   icon: 'fas fa-globe' },
+  monitor: { title: '🖥️ Screensaver', icon: '' }
 };
 
 function focusWin(id) {
@@ -953,6 +963,102 @@ function updateClock() {
 }
 updateClock();
 setInterval(updateClock, 1000);
+
+// ── Monitor video chooser ─────────────────────────────────────────────────────
+const monitorVid    = document.getElementById('monitor-video');
+const monitorArea   = document.getElementById('monitor-screen-area');
+const monitorMenu   = document.getElementById('monitor-menu');
+const monitorStopEl = document.getElementById('monitor-stop');
+
+function monitorPlay(src) {
+  monitorMenu.style.display   = 'none';
+  monitorArea.style.display   = 'block';
+  monitorStopEl.style.display = 'flex';
+  monitorVid.src = src;
+  monitorVid.load();
+  const playPromise = monitorVid.play();
+  if (playPromise !== undefined) {
+    playPromise.catch(() => {
+      // autoplay with sound blocked — retry muted
+      monitorVid.muted = true;
+      monitorVid.play().catch(e => console.error('Monitor play failed:', e));
+    });
+  }
+}
+
+function monitorStop() {
+  monitorVid.pause();
+  monitorVid.removeAttribute('src');
+  monitorArea.style.display   = 'none';
+  monitorMenu.style.display   = 'flex';
+  monitorStopEl.style.display = 'none';
+}
+
+// ── 10-min screensaver ────────────────────────────────────────────────────────
+const ssVideo = document.getElementById('screensaver');
+let idleTimer = null;
+const IDLE_MS = 10 * 60 * 1000; // 10 minutes
+
+function resetIdle() {
+  clearTimeout(idleTimer);
+  idleTimer = setTimeout(launchScreensaver, IDLE_MS);
+}
+['mousemove','mousedown','keydown','touchstart','scroll'].forEach(ev =>
+  document.addEventListener(ev, resetIdle, { passive: true })
+);
+resetIdle();
+
+function launchScreensaver() {
+  if (!ssVideo) return;
+  ssVideo.style.display = 'block';
+  ssVideo.play().catch(() => {
+    ssVideo.muted = true;
+    ssVideo.play().catch(() => {});
+  });
+}
+
+if (ssVideo) {
+  ssVideo.addEventListener('click', () => {
+    ssVideo.pause();
+    ssVideo.style.display = 'none';
+    resetIdle();
+  });
+}
+
+// ── Sound unlock prompt ───────────────────────────────────────────────────────
+(function() {
+  let unlocked = false;
+  const prompt = document.getElementById('sound-prompt');
+  if (!prompt) return;
+
+  function unlock() {
+    if (unlocked) return;
+    unlocked = true;
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    ctx.resume().then(() => {
+      if (prompt) prompt.style.display = 'none';
+    });
+    document.removeEventListener('click', unlock);
+    document.removeEventListener('keydown', unlock);
+  }
+
+  // Show prompt after first real interaction
+  document.addEventListener('click', unlock);
+  document.addEventListener('keydown', unlock);
+  if (prompt) {
+    prompt.style.display = 'block';
+    prompt.addEventListener('click', unlock);
+  }
+})();
 </script>
+
+<!-- 10-min screensaver video -->
+<video id="screensaver" loop playsinline style="display:none;position:fixed;inset:0;width:100%;height:100%;object-fit:cover;z-index:99999;cursor:none;" src="mysterysmall.mp4"></video>
+
+<!-- Sound unlock prompt -->
+<div id="sound-prompt" style="display:none;position:fixed;bottom:36px;left:50%;transform:translateX(-50%);background:#c0c0c0;border-top:2px solid #fff;border-left:2px solid #fff;border-right:2px solid #808080;border-bottom:2px solid #808080;padding:4px 14px;font-family:'MS Sans Serif',Arial,sans-serif;font-size:11px;z-index:99998;cursor:pointer;white-space:nowrap;">
+  🔊 Click anywhere to enable sound
+</div>
+
 </body>
 </html>
