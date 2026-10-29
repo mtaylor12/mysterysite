@@ -600,8 +600,8 @@ body {
         <!-- menu -->
         <div class="monitor-menu" id="monitor-menu">
           <div class="monitor-menu-lbl">SCREENSAVER</div>
-          <button class="monitor-choice" onclick="monitorPlay('mysterysmall.mp4')">&#9654; Mystery</button>
-          <button class="monitor-choice" onclick="monitorPlay('underwatersmall.mp4')">&#9654; Underwater</button>
+          <button class="monitor-choice" onclick="monitorPlay('mysteryshorter.mp4')">&#9654; Mystery</button>
+          <button class="monitor-choice" onclick="monitorPlay('underwaterfull.mp4')">&#9654; Underwater</button>
         </div>
         <!-- video fills window -->
         <div class="monitor-screen" id="monitor-screen-area">
@@ -619,9 +619,28 @@ body {
 <!-- 10-min screensaver video -->
 <video id="screensaver" loop playsinline style="display:none;position:fixed;inset:0;width:100%;height:100%;object-fit:cover;z-index:99999;cursor:none;" src="mysteryshorter.mp4"></video>
 
-<!-- Sound unlock prompt -->
-<div id="sound-prompt" style="display:none;position:fixed;bottom:36px;left:50%;transform:translateX(-50%);background:#c0c0c0;border-top:2px solid #fff;border-left:2px solid #fff;border-right:2px solid #808080;border-bottom:2px solid #808080;padding:4px 14px;font-family:'MS Sans Serif',Arial,sans-serif;font-size:11px;z-index:99998;cursor:pointer;white-space:nowrap;">
-  🔊 Click anywhere to enable sound
+<!-- Sound unlock + screensaver picker dialog -->
+<div id="sound-prompt" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#c0c0c0;border-top:2px solid #fff;border-left:2px solid #fff;border-right:2px solid #404040;border-bottom:2px solid #404040;font-family:'MS Sans Serif',Arial,sans-serif;font-size:11px;z-index:99998;min-width:280px;">
+  <!-- Title bar -->
+  <div style="background:linear-gradient(to right,#000080,#1084d0);color:#fff;padding:3px 6px;font-weight:bold;font-size:11px;display:flex;align-items:center;gap:6px;user-select:none;">
+    <span>🔊</span><span>Welcome</span>
+  </div>
+  <!-- Body -->
+  <div style="padding:14px 16px 10px;">
+    <p style="margin:0 0 10px;font-size:11px;">Click <strong>OK</strong> to enable sound and begin.<br>Choose your screensaver:</p>
+    <div style="margin-bottom:12px;display:flex;flex-direction:column;gap:5px;">
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+        <input type="radio" name="ss-pick" value="mysteryshorter.mp4" checked> Mystery
+      </label>
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+        <input type="radio" name="ss-pick" value="underwaterfull.mp4"> Underwater
+      </label>
+    </div>
+    <!-- OK button -->
+    <div style="text-align:right;">
+      <button id="ss-ok-btn" style="min-width:70px;padding:3px 10px;font-family:'MS Sans Serif',Arial,sans-serif;font-size:11px;background:#c0c0c0;border-top:2px solid #fff;border-left:2px solid #fff;border-right:2px solid #404040;border-bottom:2px solid #404040;cursor:pointer;">OK</button>
+    </div>
+  </div>
 </div>
 
 <!-- ======================================================= TASKBAR -->
@@ -1005,7 +1024,7 @@ function monitorStop() {
 // ── 10-min screensaver ────────────────────────────────────────────────────────
 const ssVideo = document.getElementById('screensaver');
 let idleTimer = null;
-const IDLE_MS = 10 * 1000; // 10 minutes
+const IDLE_MS = 10 * 60 * 1000; // 10 minutes
 
 function resetIdle() {
   clearTimeout(idleTimer);
@@ -1033,30 +1052,29 @@ if (ssVideo) {
   });
 }
 
-// ── Sound unlock prompt ───────────────────────────────────────────────────────
+// ── Sound unlock + screensaver picker ────────────────────────────────────────
 (function() {
-  let unlocked = false;
-  const prompt = document.getElementById('sound-prompt');
-  if (!prompt) return;
+  const dialog = document.getElementById('sound-prompt');
+  const okBtn  = document.getElementById('ss-ok-btn');
+  if (!dialog || !okBtn) return;
 
-  function unlock() {
-    if (unlocked) return;
-    unlocked = true;
+  // Show the dialog immediately
+  dialog.style.display = 'block';
+
+  okBtn.addEventListener('click', function() {
+    // Read which screensaver was chosen
+    const chosen = dialog.querySelector('input[name="ss-pick"]:checked');
+    if (chosen && ssVideo) {
+      ssVideo.src = chosen.value;
+    }
+
+    // Unlock the AudioContext so sounds can play
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    ctx.resume().then(() => {
-      if (prompt) prompt.style.display = 'none';
-    });
-    document.removeEventListener('click', unlock);
-    document.removeEventListener('keydown', unlock);
-  }
+    ctx.resume();
 
-  // Show prompt after first real interaction
-  document.addEventListener('click', unlock);
-  document.addEventListener('keydown', unlock);
-  if (prompt) {
-    prompt.style.display = 'block';
-    prompt.addEventListener('click', unlock);
-  }
+    // Hide the dialog
+    dialog.style.display = 'none';
+  });
 })();
 </script>
 
