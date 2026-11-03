@@ -290,7 +290,38 @@ body {
 /* ====================================================
    LINKS WINDOW
    ==================================================== */
-#links-window { width: 195px; height: 160px; bottom:36px; left:16px; z-index:100; }
+#links-window { width: 195px; height: 160px; bottom:200px; left:16px; z-index:100; }
+
+/* ====================================================
+   MEDIA PLAYER WINDOW
+   ==================================================== */
+#player-window { width: 195px; height: 130px; bottom:36px; left:16px; z-index:100; }
+
+.player-inner {
+  display:flex; flex-direction:column; align-items:center;
+  padding:6px 8px 4px; gap:5px; height:100%;
+}
+.player-track {
+  width:100%;
+  background:var(--white);
+  border-top:   2px solid var(--darker);
+  border-left:  2px solid var(--darker);
+  border-right: 2px solid var(--light);
+  border-bottom:2px solid var(--light);
+  padding:2px 5px; font-size:10px;
+  font-family:'Courier New',monospace;
+  white-space:nowrap; overflow:hidden;
+  text-overflow:ellipsis; color:var(--dark);
+}
+.player-btns { display:flex; gap:4px; width:100%; }
+.player-btns .raised-btn {
+  flex:1; text-align:center; padding:3px 0; font-size:13px;
+}
+.player-loop-row {
+  display:flex; align-items:center; gap:5px;
+  width:100%; font-size:10px; color:var(--darker);
+}
+.player-loop-row input { cursor:pointer; margin:0; }
 
 .links-list {
   background: var(--win);
@@ -585,6 +616,30 @@ body {
     </div>
   </div>
 
+  <!-- ===================================================== MEDIA PLAYER -->
+  <div class="window visible" id="player-window">
+    <div class="win-titlebar" data-win="player">
+      <span class="win-title">🎵 Media Player</span>
+      <div class="win-controls">
+        <span class="win-btn" onclick="minimizeWin('player')">_</span>
+        <span class="win-btn close-x" onclick="minimizeWin('player')">×</span>
+      </div>
+    </div>
+    <div class="win-body" style="padding:0;">
+      <div class="player-inner">
+        <div class="player-track" id="player-track">simcity.mp3</div>
+        <div class="player-btns">
+          <button class="raised-btn" id="player-play-btn" onclick="playerToggle()">▶</button>
+          <button class="raised-btn" onclick="playerStop()">■</button>
+        </div>
+        <div class="player-loop-row">
+          <input type="checkbox" id="player-loop" onchange="playerLoopToggle()">
+          <label for="player-loop">Loop</label>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ======================================================= LINKS -->
   <div class="window visible" id="links-window">
     <div class="win-titlebar" data-win="links">
@@ -742,6 +797,7 @@ const winMeta = {
   calc:     { title: '🔢 Calculator',   icon: 'fas fa-calculator' },
   timer:    { title: '⏱ Timer',         icon: '' },
   links:    { title: '🌐 Favorites',    icon: 'fas fa-globe' },
+  player:   { title: '🎵 Media Player',  icon: '' },
   monitor:  { title: '🖥️ Screensaver',  icon: '' },
   simcity:   { title: '🏙️ MicropolisJS', icon: '' },
   solitaire: { title: '🃏 Solitaire',    icon: '' }
@@ -1133,6 +1189,37 @@ if (ssVideo) {
   });
 }
 
+// ── Media Player ─────────────────────────────────────────────────────────────
+const playerAudio   = new Audio('simcity.mp3');
+const playerPlayBtn = document.getElementById('player-play-btn');
+const playerLoopCb  = document.getElementById('player-loop');
+
+playerAudio.addEventListener('ended', () => {
+  if (!playerAudio.loop) {
+    playerPlayBtn.textContent = '▶';
+  }
+});
+
+function playerToggle() {
+  if (playerAudio.paused) {
+    playerAudio.play().catch(() => {});
+    playerPlayBtn.textContent = '⏸';
+  } else {
+    playerAudio.pause();
+    playerPlayBtn.textContent = '▶';
+  }
+}
+
+function playerStop() {
+  playerAudio.pause();
+  playerAudio.currentTime = 0;
+  playerPlayBtn.textContent = '▶';
+}
+
+function playerLoopToggle() {
+  playerAudio.loop = playerLoopCb.checked;
+}
+
 // ── SimCity / MicropolisJS lazy-load ─────────────────────────────────────────
 (function() {
   const frame    = document.getElementById('simcity-frame');
@@ -1214,6 +1301,10 @@ if (ssVideo) {
     // Unlock the AudioContext so sounds can play
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
     ctx.resume();
+
+    // Auto-play the music now that we have a user gesture
+    playerAudio.play().catch(() => {});
+    playerPlayBtn.textContent = '⏸';
 
     // Hide the dialog
     dialog.style.display = 'none';
